@@ -1,0 +1,70 @@
+{
+  "name": "paperclip-plugin-jev",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Configurable advisory and automated issue triage for Paperclip using Jev.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrewdeng318/paperclip-plugin-jev.git"
+  },
+  "homepage": "https://github.com/andrewdeng318/paperclip-plugin-jev#readme",
+  "bugs": {
+    "url": "https://github.com/andrewdeng318/paperclip-plugin-jev/issues"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=24.11"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node ./esbuild.config.mjs",
+    "build:rollup": "rollup -c",
+    "dev": "node ./esbuild.config.mjs --watch",
+    "dev:ui": "paperclip-plugin-dev-server --root . --ui-dir dist/ui --port 4177",
+    "test": "vitest run --config ./vitest.config.ts",
+    "typecheck": "tsc --noEmit",
+    "prepack": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "paperclipPlugin": {
+    "manifest": "./dist/manifest.js",
+    "worker": "./dist/worker.js",
+    "ui": "./dist/ui/"
+  },
+  "keywords": [
+    "paperclip",
+    "plugin",
+    "connector"
+  ],
+  "author": "andrewdeng318",
+  "license": "MIT",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@paperclipai/plugin-sdk": "2026.916.0",
+    "@paperclipai/shared": "2026.916.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.8",
+    "esbuild": "^0.28.1",
+    "rollup": "^4.38.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "dependencies": {
+    "@typesafe-ai/sdk": "^0.6.0"
+  }
+}
