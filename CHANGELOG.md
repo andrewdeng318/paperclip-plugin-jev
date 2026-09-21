@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.2 - 2026-09-21
+
+- Increase the TypeSafe request timeout and bounded retry budget for automatic issue triage.
+- Allow failed automatic analyses to be retried when an event is redelivered.
+- Record automatic triage failures in the issue activity log.
+
 ## 0.3.1 - 2026-09-21
 
 - Connect directly to the official TypeSafe API.

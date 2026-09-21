@@ -1,5 +1,5 @@
 export const PLUGIN_ID = "zcz.jev-triage";
-export const PLUGIN_VERSION = "0.3.1";
+export const PLUGIN_VERSION = "0.3.2";
 
 export const ACTIONS = {
   analyzeIssue: "analyze-issue",
@@ -29,6 +29,8 @@ export const STATE_KEY = "latest-analysis";
 export const AUTO_STATE_KEY = "auto-analysis";
 export const DEFAULT_MODEL = "jev-latest";
 export const TYPESAFE_API_BASE_URL = "https://api.typesafe.ai";
+export const TYPESAFE_REQUEST_TIMEOUT_MS = 30_000;
+export const TYPESAFE_MAX_RETRIES = 2;
 export const DEFAULT_AUTOMATION_MODE = "advisory";
 export const DEFAULT_OWNER_CONFIDENCE_THRESHOLD = 0.8;
 export const DEFAULT_PRIORITY_CONFIDENCE_THRESHOLD = 0.7;

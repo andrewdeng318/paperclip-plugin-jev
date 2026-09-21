@@ -33,6 +33,8 @@ import {
   STATE_NAMESPACE,
   TOOL_NAMES,
   TYPESAFE_API_BASE_URL,
+  TYPESAFE_MAX_RETRIES,
+  TYPESAFE_REQUEST_TIMEOUT_MS,
 } from "./constants.js";
 import { decideBrowserAction } from "./browser.js";
 
@@ -336,8 +338,8 @@ async function analyzeIssue(
       apiKey,
       baseURL: TYPESAFE_API_BASE_URL,
       defaultModel: model,
-      timeout: 10_000,
-      retry: { maxRetries: 1 },
+      timeout: TYPESAFE_REQUEST_TIMEOUT_MS,
+      retry: { maxRetries: TYPESAFE_MAX_RETRIES },
       logLevel: "off",
       fetch: (input, init) => ctx.http.fetch(input, init),
     });
@@ -489,7 +491,8 @@ export async function handleIssueCreated(ctx: PluginContext, event: PluginEvent)
     namespace: STATE_NAMESPACE,
     stateKey: AUTO_STATE_KEY,
   };
-  if (await ctx.state.get(stateRef)) return;
+  const existingState = await ctx.state.get(stateRef) as { status?: unknown } | null;
+  if (existingState?.status === "processing" || existingState?.status === "completed") return;
 
   await ctx.state.set(stateRef, {
     status: "processing",
@@ -541,6 +544,13 @@ export async function handleIssueCreated(ctx: PluginContext, event: PluginEvent)
       eventId: event.eventId,
       failedAt: new Date().toISOString(),
       message,
+    });
+    await ctx.activity.log({
+      companyId: event.companyId,
+      entityType: "issue",
+      entityId: issueId,
+      message: "Jev automatic triage failed",
+      metadata: { message },
     });
     ctx.logger.warn("Jev automatic triage failed", { issueId, message });
   }

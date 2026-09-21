@@ -342,6 +342,48 @@ describe("Jev Issue Triage plugin", () => {
     });
   });
 
+  it("retries a previously failed automatic analysis when the event is redelivered", async () => {
+    const harness = createTestHarness({
+      manifest,
+      config: {
+        apiKeyRef: { type: "secret_ref", secretId: SECRET_ID },
+        automationMode: "auto_confident",
+      },
+    });
+    harness.seed({ issues: [testIssue()], agents: [testAgent()] });
+    await plugin.definition.setup(harness.ctx);
+    await harness.ctx.state.set({
+      scopeKind: "issue",
+      scopeId: ISSUE_ID,
+      namespace: "jev-triage",
+      stateKey: "auto-analysis",
+    }, {
+      status: "failed",
+      eventId: "event-failed",
+      message: "TypeSafe did not respond before the request timeout.",
+    });
+    vi.spyOn(harness.ctx.secrets, "resolve").mockResolvedValue("test-api-key");
+    const fetchSpy = vi.spyOn(harness.ctx.http, "fetch").mockResolvedValue(jevResponse());
+
+    await harness.emit("issue.created", { issueId: ISSUE_ID }, {
+      companyId: COMPANY_ID,
+      entityId: ISSUE_ID,
+      entityType: "issue",
+      eventId: "event-redelivered",
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(harness.getState({
+      scopeKind: "issue",
+      scopeId: ISSUE_ID,
+      namespace: "jev-triage",
+      stateKey: "auto-analysis",
+    })).toMatchObject({
+      status: "completed",
+      eventId: "event-redelivered",
+    });
+  });
+
   it("does not apply low-confidence recommendations in confident mode", async () => {
     const harness = createTestHarness({
       manifest,
