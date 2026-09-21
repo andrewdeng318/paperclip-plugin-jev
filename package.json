@@ -1,8 +1,8 @@
 {
   "name": "paperclip-plugin-jev",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
-  "description": "Configurable advisory and automated issue triage for Paperclip using Jev.",
+  "description": "Configurable issue triage and constrained browser decisions for Paperclip using Jev.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/andrewdeng318/paperclip-plugin-jev.git"

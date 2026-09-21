@@ -31,7 +31,9 @@ import {
   MAX_DESCRIPTION_LENGTH,
   STATE_KEY,
   STATE_NAMESPACE,
+  TOOL_NAMES,
 } from "./constants.js";
+import { decideBrowserAction } from "./browser.js";
 
 export type AutomationMode = "advisory" | "auto_confident" | "always_auto";
 
@@ -570,6 +572,18 @@ const plugin = definePlugin({
       const issueId = requiredString(params, "issueId");
       return await analyzeIssue(ctx, companyId, issueId, "manual");
     });
+
+    const browserTool = ctx.manifest.tools?.find((tool) => tool.name === TOOL_NAMES.decideBrowserAction);
+    if (!browserTool) throw new Error("Browser decision tool is missing from the plugin manifest.");
+    ctx.tools.register(
+      TOOL_NAMES.decideBrowserAction,
+      {
+        displayName: browserTool.displayName,
+        description: browserTool.description,
+        parametersSchema: browserTool.parametersSchema,
+      },
+      async (params, runCtx) => await decideBrowserAction(ctx, params, runCtx),
+    );
   },
 
   async onHealth() {

@@ -3,6 +3,8 @@ import { createTestHarness } from "@paperclipai/plugin-sdk/testing";
 import type { Agent, Issue } from "@paperclipai/shared";
 import manifest from "../src/manifest.js";
 import plugin, { buildQuestions, type JevIssueAnalysis } from "../src/worker.js";
+import { buildBrowserQuestions, parseBrowserDecisionInput, type BrowserDecision } from "../src/browser.js";
+import { TOOL_NAMES } from "../src/constants.js";
 
 const COMPANY_ID = "00000000-0000-4000-8000-000000000001";
 const ISSUE_ID = "00000000-0000-4000-8000-000000000002";
@@ -114,6 +116,48 @@ function jevResponse(options: {
   }), { status: 200, headers: { "content-type": "application/json" } });
 }
 
+function browserJevResponse(options: {
+  operation?: string;
+  operationConfidence?: number;
+  clickTarget?: string;
+  clickConfidence?: number;
+} = {}): Response {
+  const operation = options.operation ?? "CLICK";
+  const operationConfidence = options.operationConfidence ?? 0.95;
+  const clickTarget = options.clickTarget ?? "element_7";
+  const clickConfidence = options.clickConfidence ?? 0.92;
+  return new Response(JSON.stringify({
+    model: "jev-browser-test",
+    answers: {
+      next_operation: {
+        type: "choice",
+        choice: operation,
+        confidence: operationConfidence,
+        probabilities: { [operation]: operationConfidence, BLOCKED: 1 - operationConfidence },
+      },
+      click_target: {
+        type: "choice",
+        choice: clickTarget,
+        confidence: clickConfidence,
+        probabilities: { [clickTarget]: clickConfidence, none: 1 - clickConfidence },
+      },
+      type_text_target: {
+        type: "choice",
+        choice: "none",
+        confidence: 0.99,
+        probabilities: { none: 0.99 },
+      },
+      select_choice: {
+        type: "choice",
+        choice: "none",
+        confidence: 0.99,
+        probabilities: { none: 0.99 },
+      },
+    },
+    usage: { input_tokens: 220, output_tokens: 40 },
+  }), { status: 200, headers: { "content-type": "application/json" } });
+}
+
 describe("Jev Issue Triage plugin", () => {
   it("declares automatic triage capabilities without comment access", () => {
     expect(manifest.capabilities).toEqual(expect.arrayContaining([
@@ -126,10 +170,14 @@ describe("Jev Issue Triage plugin", () => {
       "http.outbound",
       "secrets.read-ref",
       "activity.log.write",
+      "agent.tools.register",
       "ui.action.register",
       "ui.detailTab.register",
     ]));
     expect(manifest.capabilities).not.toContain("issue.comments.read");
+    expect(manifest.tools).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: TOOL_NAMES.decideBrowserAction }),
+    ]));
     const properties = manifest.instanceConfigSchema?.properties as Record<string, unknown> | undefined;
     expect(properties?.apiKeyRef).toMatchObject({
       type: ["string", "object"],
@@ -359,5 +407,148 @@ describe("Jev Issue Triage plugin", () => {
       assigneeAgentId: AGENT_ID,
       priority: "critical",
     });
+  });
+
+  it("builds browser questions from observed targets without selectors or input values", () => {
+    const input = parseBrowserDecisionInput({
+      goal: "Open the issue details",
+      url: "http://127.0.0.1:3100/ZCZ/issues",
+      snapshotId: "snapshot-1",
+      pageText: "Issues",
+      elements: [
+        { index: 7, role: "button", name: "Open issue", actions: ["click"] },
+        { index: 8, role: "textbox", name: "Search", actions: ["type_text"] },
+        { index: 9, role: "combobox", name: "Status", actions: ["select"], options: ["Todo", "Done"] },
+      ],
+    });
+    const built = buildBrowserQuestions(input);
+
+    expect(built.clickCandidates.element_7).toMatchObject({ index: 7, name: "Open issue" });
+    expect(built.typeCandidates.element_8).toMatchObject({ index: 8, name: "Search" });
+    expect(built.selectCandidates.element_9_option_1).toMatchObject({ option: "Done" });
+    expect(JSON.stringify(built.questions)).not.toContain("selector");
+    expect(JSON.stringify(input)).not.toContain("value");
+  });
+
+  it("omits target questions and operations that have no observed candidates", () => {
+    const input = parseBrowserDecisionInput({
+      goal: "Open the first task",
+      url: "http://127.0.0.1:3100/demo",
+      snapshotId: "snapshot-dynamic-actions",
+      elements: [{ index: 1, role: "link", name: "TASK-1", actions: ["click"] }],
+    });
+    const built = buildBrowserQuestions(input);
+    const serialized = JSON.stringify(built.questions);
+
+    expect(built.questions).toHaveProperty("click_target");
+    expect(built.questions).not.toHaveProperty("type_text_target");
+    expect(built.questions).not.toHaveProperty("select_choice");
+    expect(serialized).toContain("CLICK");
+    expect(serialized).not.toContain("TYPE_TEXT");
+    expect(serialized).not.toContain("SELECT");
+  });
+
+  it("returns an advisory browser decision in observe-only mode", async () => {
+    const harness = createTestHarness({
+      manifest,
+      config: {
+        apiKeyRef: { type: "secret_ref", secretId: SECRET_ID },
+        browserMode: "observe",
+      },
+    });
+    await plugin.definition.setup(harness.ctx);
+    vi.spyOn(harness.ctx.secrets, "resolve").mockResolvedValue("test-api-key");
+    const fetchSpy = vi.spyOn(harness.ctx.http, "fetch").mockImplementation(async (_url, init) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      expect(body).not.toHaveProperty("screenshot");
+      expect(JSON.stringify(body)).not.toContain("cssSelector");
+      expect(JSON.stringify(body)).not.toContain("Issues list");
+      return browserJevResponse();
+    });
+
+    const result = await harness.executeTool(TOOL_NAMES.decideBrowserAction, {
+      goal: "Open the issue details",
+      url: "http://127.0.0.1:3100/ZCZ/issues",
+      snapshotId: "snapshot-2",
+      pageText: "Issues list",
+      elements: [{ index: 7, role: "button", name: "Open issue", actions: ["click"] }],
+      history: [],
+    }, { companyId: COMPANY_ID, projectId: "project-1", runId: "run-1", agentId: AGENT_ID });
+    const decision = result.data as BrowserDecision;
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(decision).toMatchObject({
+      operation: "CLICK",
+      target: { index: 7, name: "Open issue" },
+      policy: {
+        mode: "observe",
+        requiresConfirmation: true,
+        autoExecutable: false,
+      },
+      disclosure: {
+        pageTextIncluded: false,
+        inputValuesIncluded: false,
+        selectorsIncluded: false,
+        screenshotsIncluded: false,
+      },
+    });
+    expect(harness.activity).toEqual(expect.arrayContaining([
+      expect.objectContaining({ message: "Jev browser action decision completed" }),
+    ]));
+  });
+
+  it("permits only high-confidence non-sensitive actions in auto-safe mode", async () => {
+    const harness = createTestHarness({
+      manifest,
+      config: {
+        apiKeyRef: { type: "secret_ref", secretId: SECRET_ID },
+        browserMode: "auto_safe",
+        browserConfidenceThreshold: 0.85,
+      },
+    });
+    await plugin.definition.setup(harness.ctx);
+    vi.spyOn(harness.ctx.secrets, "resolve").mockResolvedValue("test-api-key");
+    vi.spyOn(harness.ctx.http, "fetch").mockImplementation(async () => browserJevResponse());
+
+    const safeResult = await harness.executeTool(TOOL_NAMES.decideBrowserAction, {
+      goal: "Open the issue details",
+      url: "http://127.0.0.1:3100/ZCZ/issues",
+      snapshotId: "snapshot-3",
+      elements: [{ index: 7, role: "button", name: "Open issue", actions: ["click"] }],
+    }, { companyId: COMPANY_ID, projectId: "project-1" });
+    expect((safeResult.data as BrowserDecision).policy).toMatchObject({
+      requiresConfirmation: false,
+      autoExecutable: true,
+    });
+
+    const sensitiveResult = await harness.executeTool(TOOL_NAMES.decideBrowserAction, {
+      goal: "Publish the release",
+      url: "http://127.0.0.1:3100/ZCZ/issues",
+      snapshotId: "snapshot-4",
+      elements: [{ index: 7, role: "button", name: "Deploy to production", actions: ["click"] }],
+    }, { companyId: COMPANY_ID, projectId: "project-1" });
+    expect((sensitiveResult.data as BrowserDecision).policy).toMatchObject({
+      requiresConfirmation: true,
+      autoExecutable: false,
+    });
+  });
+
+  it("rejects browser origins outside the configured allowlist before calling Jev", async () => {
+    const harness = createTestHarness({
+      manifest,
+      config: { apiKeyRef: { type: "secret_ref", secretId: SECRET_ID } },
+    });
+    await plugin.definition.setup(harness.ctx);
+    const fetchSpy = vi.spyOn(harness.ctx.http, "fetch");
+
+    const result = await harness.executeTool(TOOL_NAMES.decideBrowserAction, {
+      goal: "Open account settings",
+      url: "https://example.com/settings",
+      snapshotId: "snapshot-5",
+      elements: [{ index: 1, role: "link", name: "Settings", actions: ["click"] }],
+    }, { companyId: COMPANY_ID, projectId: "project-1" });
+
+    expect(result.error).toContain("not in the configured browser allowlist");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
