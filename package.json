@@ -1,6 +1,6 @@
 {
   "name": "paperclip-plugin-jev",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "description": "Configurable issue triage and constrained browser decisions for Paperclip using Jev.",
   "repository": {

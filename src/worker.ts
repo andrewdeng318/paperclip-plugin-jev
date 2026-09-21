@@ -32,6 +32,7 @@ import {
   STATE_KEY,
   STATE_NAMESPACE,
   TOOL_NAMES,
+  TYPESAFE_API_BASE_URL,
 } from "./constants.js";
 import { decideBrowserAction } from "./browser.js";
 
@@ -267,18 +268,18 @@ function probabilityEntries(response: ChoiceResponse, labels: Record<string, str
 
 function safeProviderError(error: unknown): Error {
   if (error instanceof AuthenticationError || error instanceof PermissionDeniedError) {
-    return new Error("Jev rejected the configured API key. Update the plugin secret and try again.");
+    return new Error("TypeSafe rejected the configured API key. Update the plugin secret and try again.");
   }
   if (error instanceof RateLimitError) {
-    return new Error("Jev rate limit reached. Try again later.");
+    return new Error("TypeSafe rate limit reached. Try again later.");
   }
   if (error instanceof APITimeoutError) {
-    return new Error("Jev did not respond before the request timeout.");
+    return new Error("TypeSafe did not respond before the request timeout.");
   }
   if (error instanceof APIConnectionError) {
-    return new Error("Could not connect to the Jev API.");
+    return new Error("Could not connect to the TypeSafe API.");
   }
-  return new Error("Jev analysis failed. No Paperclip issue fields were changed.");
+  return new Error("TypeSafe analysis failed. No Paperclip issue fields were changed.");
 }
 
 async function getIssueContext(ctx: PluginContext, companyId: string, issueId: string): Promise<IssueContextData> {
@@ -315,7 +316,7 @@ async function analyzeIssue(
   ]);
   if (!issue) throw new Error("Issue not found in the active company");
   if (!config.apiKeyRef) {
-    throw new Error("Configure a company-scoped Jev API key in the Jev Issue Triage plugin settings first.");
+    throw new Error("Configure a company-scoped TypeSafe API key in the Jev Issue Triage plugin settings first.");
   }
 
   const apiKey = await ctx.secrets.resolve(config.apiKeyRef, { companyId, configPath: "apiKeyRef" });
@@ -333,7 +334,7 @@ async function analyzeIssue(
   try {
     const client = new TypeSafeClient({
       apiKey,
-      baseURL: "https://jev-ai.pro/api",
+      baseURL: TYPESAFE_API_BASE_URL,
       defaultModel: model,
       timeout: 10_000,
       retry: { maxRetries: 1 },

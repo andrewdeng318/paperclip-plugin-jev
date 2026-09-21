@@ -193,7 +193,7 @@ export function JevAnalyzeButton() {
             <div>
               <h2 style={{ margin: 0, fontSize: "18px" }}>Analyze issue with Jev</h2>
               <p style={{ ...mutedStyle, marginTop: "6px" }}>
-                This sends a minimized issue snapshot to the Jev API and returns advisory routing signals.
+                This sends a minimized issue snapshot to the official TypeSafe API and returns advisory routing signals from Jev.
               </p>
             </div>
 
@@ -225,7 +225,7 @@ export function JevAnalyzeButton() {
                 </div>
                 {!issueContext.data.configured ? (
                   <div style={{ border: "1px solid #d97706", borderRadius: "10px", padding: "10px", fontSize: "12px" }}>
-                    Configure a company-scoped Jev API key in the plugin settings before running analysis.
+                    Configure a company-scoped TypeSafe API key in the plugin settings before running analysis.
                   </div>
                 ) : null}
               </div>

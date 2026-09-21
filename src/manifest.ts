@@ -45,8 +45,8 @@ const manifest: PaperclipPluginManifestV1 = {
       apiKeyRef: {
         type: ["string", "object"],
         format: "secret-ref",
-        title: "Jev API Key",
-        description: "Company-scoped secret used only by the plugin worker to call the Jev API.",
+        title: "TypeSafe API Key",
+        description: "Company-scoped secret used only by the plugin worker to call the official TypeSafe API.",
       },
       model: {
         type: "string",

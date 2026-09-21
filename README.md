@@ -56,13 +56,13 @@ For browser decisions, the plugin sends only the goal, URL, numbered element rol
 
 Automatic modes can update only the issue owner and priority. They do not change status, description, comments, attachments, or relationships.
 
-The provider base URL is fixed to `https://jev-ai.pro/api`.
+The provider base URL is fixed to the official TypeSafe endpoint at `https://api.typesafe.ai`. The plugin does not route requests through third-party Jev gateways.
 
 ## Requirements
 
 - Paperclip with plugin support
 - Node.js 24.11 or later for local development
-- A Jev API key from <https://jev-ai.pro/jev-api>
+- A TypeSafe API key from <https://console.typesafe.ai/keys>
 
 ## Install
 
@@ -85,9 +85,9 @@ paperclipai plugin install "$PWD" --local
 ## Configure
 
 1. Open **Settings → Secrets** in Paperclip.
-2. Create a company-scoped managed secret for the Jev API key.
+2. Create a company-scoped managed secret for the TypeSafe API key.
 3. Open **Settings → Plugins → Jev Issue Triage**.
-4. Select the secret in **Jev API Key**.
+4. Select the secret in **TypeSafe API Key**.
 5. Select an automation mode.
 6. Adjust the confidence thresholds if needed.
 7. Select a browser decision mode and review the allowed origins.
@@ -119,7 +119,7 @@ Use `pnpm dev` to rebuild the worker, manifest, and UI bundles when source files
 
 ## Security
 
-Do not put a Jev API key in source code, issue comments, configuration files, or shell history. Store it through Paperclip Secrets and bind the resulting secret reference in the plugin settings.
+Do not put a TypeSafe API key in source code, issue comments, configuration files, or shell history. Store it through Paperclip Secrets and bind the resulting secret reference in the plugin settings.
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting guidance.
 
@@ -129,4 +129,4 @@ MIT
 
 ## Disclaimer
 
-This is a community plugin. It is not maintained or endorsed by Paperclip or Jev.
+This is a community plugin. It is not maintained or endorsed by Paperclip or TypeSafe.

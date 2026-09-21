@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.1 - 2026-09-21
+
+- Connect directly to the official TypeSafe API.
+- Rename API key guidance to distinguish TypeSafe credentials from third-party Jev AI credentials.
+- Keep the existing secret-reference field compatible with installed configurations.
+
 ## 0.3.0 - 2026-09-21
 
 - Add a Jev-powered browser decision agent tool.
@@ -20,7 +26,7 @@ All notable changes to this project are documented in this file.
 - Add confidence thresholds and missing-context protection.
 - Add issue-created event automation with idempotency protection.
 - Add automatic owner and priority updates.
-- Use the official Jev API endpoint.
+- Use a fixed Jev AI API endpoint.
 - Add eight automated tests.
 
 ## 0.1.0 - 2026-09-20

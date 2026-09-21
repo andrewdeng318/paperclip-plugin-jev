@@ -182,6 +182,7 @@ describe("Jev Issue Triage plugin", () => {
     expect(properties?.apiKeyRef).toMatchObject({
       type: ["string", "object"],
       format: "secret-ref",
+      title: "TypeSafe API Key",
     });
   });
 
@@ -214,7 +215,7 @@ describe("Jev Issue Triage plugin", () => {
     await expect(harness.performAction("analyze-issue", {
       companyId: COMPANY_ID,
       issueId: ISSUE_ID,
-    })).rejects.toThrow("Configure a company-scoped Jev API key");
+    })).rejects.toThrow("Configure a company-scoped TypeSafe API key");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -230,7 +231,7 @@ describe("Jev Issue Triage plugin", () => {
     await plugin.definition.setup(harness.ctx);
     vi.spyOn(harness.ctx.secrets, "resolve").mockResolvedValue("test-api-key");
     const fetchSpy = vi.spyOn(harness.ctx.http, "fetch").mockImplementation(async (url, init) => {
-      expect(String(url)).toBe("https://jev-ai.pro/api/v1/systemone");
+      expect(String(url)).toBe("https://api.typesafe.ai/v1/systemone");
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       expect(body).not.toHaveProperty("comments");
       expect(body).not.toHaveProperty("attachments");

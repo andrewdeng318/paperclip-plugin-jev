@@ -28,6 +28,7 @@ import {
   MAX_BROWSER_PAGE_TEXT_LENGTH,
   MAX_BROWSER_SELECT_OPTIONS,
   MAX_BROWSER_SNAPSHOT_ID_LENGTH,
+  TYPESAFE_API_BASE_URL,
 } from "./constants.js";
 
 export type BrowserMode = "observe" | "confirm" | "auto_safe";
@@ -342,16 +343,16 @@ export function buildBrowserQuestions(input: BrowserDecisionInput): {
 
 function safeProviderError(error: unknown): Error {
   if (error instanceof AuthenticationError || error instanceof PermissionDeniedError) {
-    return new Error("Jev rejected the configured API key. Update the plugin secret and try again.");
+    return new Error("TypeSafe rejected the configured API key. Update the plugin secret and try again.");
   }
-  if (error instanceof RateLimitError) return new Error("Jev rate limit reached. Try again later.");
+  if (error instanceof RateLimitError) return new Error("TypeSafe rate limit reached. Try again later.");
   if (error instanceof APIError) {
     const requestId = error.requestId ? ` Request ID: ${error.requestId}.` : "";
-    return new Error(`Jev rejected the browser decision request with HTTP ${error.status}.${requestId}`);
+    return new Error(`TypeSafe rejected the browser decision request with HTTP ${error.status}.${requestId}`);
   }
-  if (error instanceof APITimeoutError) return new Error("Jev did not respond before the request timeout.");
-  if (error instanceof APIConnectionError) return new Error("Could not connect to the Jev API.");
-  return new Error("Jev browser decision failed. No browser action was executed.");
+  if (error instanceof APITimeoutError) return new Error("TypeSafe did not respond before the request timeout.");
+  if (error instanceof APIConnectionError) return new Error("Could not connect to the TypeSafe API.");
+  return new Error("TypeSafe browser decision failed. No browser action was executed.");
 }
 
 function choiceAnswer(value: unknown, name: string): ChoiceResponse {
@@ -419,7 +420,7 @@ export async function decideBrowserAction(
   }
 
   const config = await getBrowserConfig(ctx, runCtx.companyId);
-  if (!config.apiKeyRef) return { error: "Configure a company-scoped Jev API key before using browser decisions." };
+  if (!config.apiKeyRef) return { error: "Configure a company-scoped TypeSafe API key before using browser decisions." };
 
   const origin = new URL(input.url).origin;
   if (!config.allowedOrigins.includes(origin)) {
@@ -451,7 +452,7 @@ export async function decideBrowserAction(
   try {
     const client = new TypeSafeClient({
       apiKey,
-      baseURL: "https://jev-ai.pro/api",
+      baseURL: TYPESAFE_API_BASE_URL,
       defaultModel: config.model,
       timeout: 10_000,
       retry: { maxRetries: 1 },
